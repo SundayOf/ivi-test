@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Selenium Hub - центр управления браузерами
+  selenium-hub:
+    image: selenium/hub:4.17.0
+    container_name: selenium-hub
+    ports:
+      - '4444:4444'
+
+  # Chrome Node - контейнер с браузером Chrome
+  chrome-node:
+    image: selenium/node-chrome:4.17.0
+    container_name: chrome-node
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  # Веб-приложение
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: wdio-app
+    depends_on:
+      - selenium-hub
+      - chrome-node
+    ports:
+      - '4000:4000'
+    environment:
+      - SELENIUM_GRID_URL=http://selenium-hub:4444
+
+  # Сервис с тестами
+  wdio-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.tests
+    container_name: wdio-tests
+    depends_on:
+      - app
+      - selenium-hub
+    environment:
+      - APP_URL=http://wdio-app:4000
+      - SELENIUM_HUB_HOST=selenium-hub
+    volumes:
+      - .:/usr/src/app
+    command: ['npx', 'wdio', 'run', './wdio.docker.conf.ts']
