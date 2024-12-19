@@ -32,6 +32,7 @@ services:
       - '4000:4000'
     environment:
       - SELENIUM_GRID_URL=http://selenium-hub:4444
+      - IS_DOCKER=true
 
   # Сервис с тестами
   wdio-tests:
@@ -45,6 +46,7 @@ services:
     environment:
       - APP_URL=http://wdio-app:4000
       - SELENIUM_HUB_HOST=selenium-hub
+      - IS_DOCKER=true
     volumes:
       - .:/usr/src/app
     command: ['npx', 'wdio', 'run', './wdio.docker.conf.ts']
