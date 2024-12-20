@@ -3,5 +3,3 @@ logs/
 allure-results/
 allure-report/
 .env
-
-package-lock.json
