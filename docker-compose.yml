@@ -47,6 +47,11 @@ services:
       - APP_URL=http://wdio-app:4000
       - SELENIUM_HUB_HOST=selenium-hub
       - IS_DOCKER=true
+      - TEST_SITE_URL=https://test.zakaz-ivi.online/
+      - TEST_USER=${TEST_USER}
+      - TEST_USER_PASSWORD=${TEST_USER_PASSWORD}
+      - DOMAIN_USER=${DOMAIN_USER}
+      - DOMAIN_USER_PASSWORD=${DOMAIN_USER_PASSWORD}
     volumes:
       - .:/usr/src/app
     command: ['npx', 'wdio', 'run', './wdio.docker.conf.ts']
