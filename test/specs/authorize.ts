@@ -1,18 +1,30 @@
 import { browser, $ } from '@wdio/globals'
 import { getXPathSelector } from 'funcs/getXPathSelector'
 import { baseUrl, domainLogin, domainPassword, userLogin, userPassword } from '../env-config'
-import { addStep, addFeature, addSeverity, addAttachment } from '@wdio/allure-reporter'
+import { addStep, addFeature, addSeverity } from '@wdio/allure-reporter'
 
-describe('Загрузка веб-приложения и авторизация', () => {
-  it('Веб-приложение загружено и прошло авторизацию', async () => {
+describe('Тестирование веб-приложения: регистрация, авторизация и выход', () => {
+  it('Должно успешно загружаться приложение, выполнять авторизацию с правильными данными и выход', async () => {
     addFeature('Загрузка веб-приложения и авторизация')
     addSeverity('critical')
+
     await loadPage()
-    await loginUser()
+    await verifyMenus()
+    await loginWithValidCredentials()
+    await logoutUser()
+  })
+
+  it('Должно отображать сообщение об ошибке при вводе неправильных данных', async () => {
+    addFeature('Загрузка веб-приложения и авторизация')
+    addSeverity('critical')
+
+    await loadPage()
+    await verifyMenus()
+    await loginWithInvalidCredentials()
   })
 })
 
-async function loadPage() {
+export async function loadPage(): Promise<void> {
   if (!baseUrl || !domainLogin || !domainPassword) {
     throw new Error('Некорректная конфигурация переменных окружения: !baseUrl || !domainLogin || !domainPassword')
   }
@@ -20,97 +32,96 @@ async function loadPage() {
 
   addStep('Переход на главную страницу с аутентификацией')
 
-  const authUrl = baseUrl.replace(
-    'https://',
-    `https://${encodeURIComponent(domainLogin)}:${encodeURIComponent(domainPassword)}@`
-  )
-  await browser.url(authUrl)
+  // const authUrl = baseUrl.replace(
+  //   'https://',
+  //   `https://${encodeURIComponent(domainLogin || '')}:${encodeURIComponent(domainPassword || '')}@`
+  // )
+  await browser.url(baseUrl)
 }
 
-async function loginUser() {
+async function verifyMenus(): Promise<void> {
+  addStep('Проверка наличия меню "Регистрация" и "Вход"')
+
+  const registrationMenu = $(getXPathSelector('div', '', '', 'Регистрация', true))
+  const loginMenu = $(getXPathSelector('div', '', '', 'Вход', true))
+
+  await registrationMenu.waitForDisplayed({
+    timeout: 6000,
+    timeoutMsg: 'Меню "Регистрация" не отображается'
+  })
+
+  await loginMenu.waitForDisplayed({
+    timeout: 6000,
+    timeoutMsg: 'Меню "Вход" не отображается'
+  })
+}
+
+async function loginWithValidCredentials(): Promise<void> {
   if (!userLogin || !userPassword) {
     throw new Error('Некорректная конфигурация переменных окружения: userLogin || userPassword')
   }
-  addStep('Открытие меню авторизации')
+  addStep('Попытка входа с правильными учетными данными')
 
   const toggleMenu = $(getXPathSelector('div', '', '', 'Вход', true))
-
-  await toggleMenu.waitForExist({
-    timeout: 10000,
-    timeoutMsg: 'Меню авторизации не появилось'
-  })
-  await toggleMenu.waitForClickable({
-    timeout: 10000,
-    timeoutMsg: 'Меню авторизации недоступно для клика'
-  })
-  await toggleMenu.scrollIntoView({
-    block: 'center',
-    inline: 'nearest'
-  })
-
   await toggleMenu.click()
-
-  addStep('Ожидание загрузки меню авторизации')
-  await browser.waitUntil(async () => (await toggleMenu.getAttribute('class')).includes('markOpenMenu'), {
-    timeout: 10000,
-    timeoutMsg: 'Меню авторизации не открылось'
-  })
 
   const usernameField = $('form[class*="boxForm"] input[type="text"]')
   const passwordField = $('form[class*="boxForm"] input[placeholder="(введите пароль)"]')
-
-  await usernameField.waitForExist({
-    timeout: 10000,
-    timeoutMsg: 'Поле ввода имени пользователя не найдено'
-  })
-  await usernameField.waitForDisplayed({
-    timeout: 10000,
-    timeoutMsg: 'Поле ввода имени пользователя не отображается'
-  })
-
-  addStep('Ввод имени пользователя')
-  await usernameField.setValue(userLogin)
-
-  await browser.waitUntil(async () => !(await passwordField.getAttribute('disabled')), {
-    timeout: 10000,
-    timeoutMsg: 'Поле ввода пароля неактивно'
-  })
-
-  addStep('Ввод пароля')
-  await passwordField.setValue(userPassword)
-
   const loginButton = $(getXPathSelector('form', 'boxForm', 'button', 'Войти', true))
 
-  await loginButton.waitForExist({
-    timeout: 10000,
-    timeoutMsg: 'Кнопка входа не найдена'
-  })
-  await loginButton.waitForDisplayed({
-    timeout: 10000,
-    timeoutMsg: 'Кнопка входа не отображается'
-  })
+  await usernameField.setValue(userLogin)
+  await passwordField.setValue(userPassword)
 
-  if (await loginButton.getAttribute('disabled')) {
-    addAttachment('Ошибка', 'Кнопка входа отключена', 'text/plain')
-    throw new Error('Кнопка входа отключена')
-  }
-
-  addStep('Нажатие кнопки входа')
   await loginButton.click()
 
   const authorized = $(getXPathSelector('div', 'userName', 'a', userLogin, true))
-
-  addStep('Проверка авторизации пользователя')
   await authorized.waitForDisplayed({
-    timeout: 10000,
+    timeout: 6000,
     timeoutMsg: 'Авторизация не выполнена'
   })
+}
+
+async function loginWithInvalidCredentials(): Promise<void> {
+  addStep('Попытка входа с неправильными учетными данными')
+
+  const toggleMenu = $(getXPathSelector('div', '', '', 'Вход', true))
+  await toggleMenu.click()
+
+  const usernameField = $('form[class*="boxForm"] input[type="text"]')
+  const passwordField = $('form[class*="boxForm"] input[placeholder="(введите пароль)"]')
+  const loginButton = $(getXPathSelector('form', 'boxForm', 'button', 'Войти', true))
+
+  await usernameField.setValue('wrongUser')
+  await passwordField.setValue('wrongPassword')
+
+  await loginButton.click()
+
+  const errorMessage = $('.styles_messageContainer__H2DpK')
+  await errorMessage.waitForDisplayed({
+    timeout: 6000,
+    timeoutMsg: 'Сообщение об ошибке не появилось'
+  })
+  const text = await errorMessage.getText()
+  console.log(text)
+  if (text !== 'Логин или пароль указаны неверно') {
+    throw new Error('Ожидалось сообщение о неверных учетных данных, но было: ' + text)
+  }
+}
+
+async function logoutUser(): Promise<void> {
+  addStep('Попытка выхода из системы')
 
   const logoutButton = $(getXPathSelector('div', 'logoutButton', '', '', true))
-  addStep('Нажатие кнопки выхода')
+
   await logoutButton.waitForClickable({
-    timeout: 10000,
+    timeout: 6000,
     timeoutMsg: 'Кнопка выхода недоступна для клика'
   })
   await logoutButton.click()
+
+  const loginMenu = $(getXPathSelector('div', '', '', 'Вход', true))
+  await loginMenu.waitForDisplayed({
+    timeout: 6000,
+    timeoutMsg: 'Кнопка "Вход" не отображается после выхода'
+  })
 }
