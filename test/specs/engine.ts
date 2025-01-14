@@ -1,11 +1,10 @@
 import { browser, $, $$ } from '@wdio/globals'
 import { getXPathSelector } from 'funcs/getXPathSelector'
-import { addStep, addFeature, addSeverity, addAttachment } from '@wdio/allure-reporter'
+import { addStep, addSeverity, addAttachment } from '@wdio/allure-reporter'
 import { loadPage } from './authorize'
 
 describe('Проверка 3D-движка', () => {
   it('Типы изделий, 3D-модели и эскизы должны быть доступны', async () => {
-    addFeature('Загрузка веб-приложения')
     addSeverity('critical')
 
     addStep('Загрузка страницы')
@@ -32,10 +31,12 @@ async function checkType(): Promise<void> {
   const calc = $(getXPathSelector('button', 'masterCalcButton', '', '', true))
   const calcSuccess = $(getXPathSelector('div', 'calcTextSuccess', '', '', true))
   const priceSuccess = $(getXPathSelector('div', 'priceTextSuccess', '', '', true))
-  const spec = $(
+  const spec =
     "//div[contains(@class, 'styles_rowMaterial__oN1XI') and not(contains(@class, 'styles_rowMaterialCaption__AvbyN'))]" +
-      "[.//span[normalize-space(text()) != '']]"
-  )
+    "[.//span[normalize-space(text()) != '']]"
+  const characters =
+    "//div[contains(@class, 'styles_rowCharacter__JPTjX')]" +
+    "//span[contains(@class, 'styles_characterValue__l92jf') and normalize-space(text()) != '']"
   const canvas = $('.styles_canvasContainer__a0jKF')
   const draftButton = $("//span[normalize-space(text()) = 'Эскизы']")
   const draft = $('.styles_draft__Ps3Im')
@@ -63,9 +64,10 @@ async function checkType(): Promise<void> {
   addStep('Ожидание данных на панели "Цена"')
   await priceSuccess.waitForDisplayed({ timeout: 5000, timeoutMsg: 'priceSuccess is not displayed' })
   addStep('Ожидание данных на панели "Спецификация"')
-  await spec.waitForDisplayed({ timeout: 5000, timeoutMsg: 'spec is not displayed' })
+  // await spec.waitForDisplayed({ timeout: 5000, timeoutMsg: 'spec is not displayed' })
+  await attachFile(spec, 'spec')
   addStep('Ожидание данных на панели "Характеристики"')
-  await checkCharacters()
+  await attachFile(characters, 'characters')
 
   addStep('Проверка 3D-модели и эскизов')
   await canvas.waitForDisplayed({ timeout: 16000, timeoutMsg: '3d-model is not displayed' })
@@ -76,13 +78,15 @@ async function checkType(): Promise<void> {
   addAttachment('Скриншот 3D-модели и эскизов', Buffer.from(screenshot, 'base64'), 'image/png')
 }
 
-async function checkCharacters(): Promise<void> {
-  const elements = $$(
-    "//div[contains(@class, 'styles_rowCharacter__JPTjX')]" +
-      "//span[contains(@class, 'styles_characterValue__l92jf') and normalize-space(text()) != '']"
-  )
+async function attachFile(selector: string, elementName: string): Promise<void> {
+  const elements = $$(selector)
+  if (!(await elements.length)) throw new Error(`element ${elementName} is empty`)
 
-  if (!(await elements.length)) {
-    throw new Error('Characters is empty')
+  let text = []
+  for (let i = 0; i < (await elements.length); i++) {
+    text.push(await elements[i].getText())
   }
+
+  const data = JSON.stringify(text, null, 2)
+  addAttachment(elementName, data, 'application/json')
 }

@@ -1,24 +1,21 @@
 import { browser, $ } from '@wdio/globals'
 import { getXPathSelector } from 'funcs/getXPathSelector'
 import { baseUrl, domainLogin, domainPassword, userLogin, userPassword } from '../env-config'
-import { addStep, addFeature, addSeverity } from '@wdio/allure-reporter'
+import { addStep, addSeverity, addAttachment } from '@wdio/allure-reporter'
 
 describe('Тестирование веб-приложения: регистрация, авторизация и выход', () => {
   it('Должно успешно загружаться приложение, выполнять авторизацию с правильными данными и выход', async () => {
-    addFeature('Загрузка веб-приложения и авторизация')
     addSeverity('critical')
-
     await loadPage()
     await verifyMenus()
     await loginWithValidCredentials()
     await logoutUser()
   })
+})
 
+describe('Тестирование авторизации при вводе неправильных данных', () => {
   it('Должно отображать сообщение об ошибке при вводе неправильных данных', async () => {
-    addFeature('Загрузка веб-приложения и авторизация')
     addSeverity('critical')
-
-    await loadPage()
     await verifyMenus()
     await loginWithInvalidCredentials()
   })
@@ -102,14 +99,13 @@ async function loginWithInvalidCredentials(): Promise<void> {
     timeoutMsg: 'Сообщение об ошибке не появилось'
   })
   const text = await errorMessage.getText()
-  console.log(text)
   if (text !== 'Логин или пароль указаны неверно') {
     throw new Error('Ожидалось сообщение о неверных учетных данных, но было: ' + text)
   }
 }
 
 async function logoutUser(): Promise<void> {
-  addStep('Попытка выхода из системы')
+  addStep('Попытка выхода из аккаунта')
 
   const logoutButton = $(getXPathSelector('div', 'logoutButton', '', '', true))
 
@@ -124,4 +120,7 @@ async function logoutUser(): Promise<void> {
     timeout: 6000,
     timeoutMsg: 'Кнопка "Вход" не отображается после выхода'
   })
+
+  const screenshot = await browser.takeScreenshot()
+  addAttachment('Скриншот после выхода из аккаунта', Buffer.from(screenshot, 'base64'), 'image/png')
 }
