@@ -26,7 +26,7 @@ app.post('/run-tests', async (req, res) => {
     console.log(`Используется конфигурационный файл: ${configFile}`)
 
     // Запуск команды тестов
-    const wdioCommand = spawn('npx', ['wdio', 'run', configFile])
+    const wdioCommand = spawn('npx', ['wdio', 'run', configFile], { shell: true })
 
     // Логи процесса
     wdioCommand.stdout.on('data', (data) => {
@@ -58,14 +58,11 @@ app.post('/run-tests', async (req, res) => {
         }
 
         // Генерация Allure отчета
-        const generateReportCommand = spawn('npx', [
-          'allure',
-          'generate',
-          allureResultsDir,
-          '--clean',
-          '-o',
-          allureReportDir
-        ])
+        const generateReportCommand = spawn(
+          'npx',
+          ['allure', 'generate', allureResultsDir, '--clean', '-o', allureReportDir],
+          { shell: true }
+        )
 
         generateReportCommand.stdout.on('data', (data) => {
           console.log(`Allure STDOUT: ${data}`)

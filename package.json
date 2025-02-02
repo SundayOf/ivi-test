@@ -20,7 +20,7 @@
     "wdio": "wdio run ./wdio.conf.ts",
     "wdio:docker": "wdio run ./wdio.docker.conf.ts",
     "report": "npx allure generate ./reporters/allure-results --clean",
-    "clean-results": "node funcs/clean-results.js"
+    "clean-results": "node utils/clean-results.js"
   },
   "dependencies": {
     "body-parser": "^1.20.3",
