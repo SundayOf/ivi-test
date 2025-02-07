@@ -1,6 +1,6 @@
 import { addSeverity } from '@wdio/allure-reporter'
 import { userLogin, userPassword } from '@/env-config'
-import { findAuthForm, loginWithValidCredentials } from '@/funcs/login'
+import { checkIsRegistrationDisplayed, loginWithValidCredentials } from '@/funcs/login'
 import { loadPage } from '@/funcs/loadPage'
 import { logoutUser } from '@/funcs/logout'
 import { loginWithInvalidCredentials } from '@/funcs/failedLogin'

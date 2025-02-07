@@ -1,18 +1,17 @@
 import { $ } from '@wdio/globals'
-import { getXPathSelector } from '@/funcs/getXPathSelector'
 import { addStep } from '@wdio/allure-reporter'
-import { findAuthForm } from './login'
+import { checkRegistration } from './login'
 
 export async function loginWithInvalidCredentials(): Promise<void> {
-  await findAuthForm()
+  await checkRegistration()
   addStep('Попытка входа с неправильными учетными данными')
 
-  const toggleMenu = $(getXPathSelector('div', '', '', 'Вход', true))
+  const toggleMenu = $('div=Вход')
   await toggleMenu.click()
 
   const usernameField = $('form[class*="boxForm"] input[type="text"]')
   const passwordField = $('form[class*="boxForm"] input[placeholder="(введите пароль)"]')
-  const loginButton = $(getXPathSelector('form', 'boxForm', 'button', 'Войти', true))
+  const loginButton = $('form[class*="boxForm"]').$('button=Войти')
 
   await usernameField.setValue('wrongUser')
   await passwordField.setValue('wrongPassword')

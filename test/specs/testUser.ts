@@ -8,70 +8,120 @@ import {
   userVendorPassword
 } from '@/env-config'
 import { loginWithValidCredentials } from '@/funcs/login'
+import { isLogged } from '@/funcs/isLogged'
 import { loadPage } from '@/funcs/loadPage'
+import { isLoading } from '@/funcs/isLoading'
 import { addAttachment, addStep, endStep, startStep } from '@wdio/allure-reporter'
 import { $, expect } from '@wdio/globals'
+import { Key } from 'webdriverio'
 
-describe('Тестирование профиля пользователя', () => {
+type TRole = 'buyer' | 'manufactor' | 'vendor'
+
+describe('Тестирование пользователей', () => {
   it('Должно провести на ввод валидных и невалидных значений для пользователя testUserBuyer', async () => {
     await loadPage()
-    // await loginWithValidCredentials(userBuyerLogin, userBuyerPassword)
-    // await loginWithValidCredentials(userManufactorLogin, userManufactorPassword)
+    await loginWithValidCredentials(userBuyerLogin, userBuyerPassword)
+    await testAccountPanels('buyer')
+  })
+  it('Должно провести на ввод валидных и невалидных значений для пользователя testUserManufactor', async () => {
+    await isLogged()
+    await loadPage()
+    await loginWithValidCredentials(userManufactorLogin, userManufactorPassword)
+    await testAccountPanels('manufactor')
+  })
+  it('Должно провести на ввод валидных и невалидных значений для пользователя testUserVendor', async () => {
+    await isLogged()
+    await loadPage()
     await loginWithValidCredentials(userVendorLogin, userVendorPassword)
-    await testPanels()
+    await testAccountPanels('vendor')
   })
 })
 
-export async function testPanels(): Promise<void> {
+export async function testAccountPanels(role: TRole): Promise<void> {
+  if (!userBuyerPassword || !userManufactorPassword || !userVendorPassword) {
+    throw new Error(
+      'password is undefiend: !userBuyerPassword || !userManufactorPassword || !userVendorPassword'
+    )
+  }
+  const userPasswords = {
+    buyer: userBuyerPassword,
+    manufactor: userManufactorPassword,
+    vendor: userVendorPassword
+  }
   addStep('Переходим во вкладку account/profile')
   await browser.url(baseUrl + 'account/profile')
   addStep('Проверяем наличие панелей учетных данных: Аккаунт, Пользователь, Смена пароля')
-  const legendPath = (text: string) =>
-    `//div[contains(@class, "account")]//legend[contains(@class, "legend") and text()="${text}"]`
 
-  // await validateUser(legendPath('Аккаунт'))
-  // await validatePassword(legendPath('Смена пароля'))
-  // await validateCounterparty()
-  // await checkRequisits(legendPath('Реквизиты'))
-  // await checkManufactorData()
-  // await editVendorData()
+  await validateUser()
+  await validatePassword(userPasswords[role])
+  await validateCounterparty()
+
+  if (role !== 'buyer') {
+    await checkRequisits()
+    if (role === 'manufactor') await checkManufactorData()
+    if (role === 'vendor') await checkVendorData()
+  }
 }
 
-async function editVendorData(): Promise<void> {
-  addStep('Переходим во вкладку "Данные поставщика"')
-  const tab = $('//span[contains(@class, "orderNavItem") and text() = "Данные поставщика"]')
+async function toggleAccountPanel(label: string): Promise<void> {
+  const legend = $('div[class*="account"]').$(`legend=${label}`)
+  const arrow = legend.$('span[class*="sectionIcon"]')
+  const classList = await arrow.getAttribute('class')
+
+  if (classList.includes('close')) {
+    await legend.click()
+    await expect(arrow).toHaveElementClass(/open/)
+  }
+}
+
+async function accountTabClick(text: string): Promise<void> {
+  addStep(`Переходим во вкладку "${text}"`)
+  const tab = $(`//span[contains(@class, "orderNavItem") and text()="${text}"]`)
   await tab.click()
+}
+
+async function checkVendorData(): Promise<void> {
+  await accountTabClick('Данные поставщика')
+
+  await isLoading()
 
   addStep('Клик по кнопке "Редактировать"')
   const editBtn = $('//div[contains(@class, "tabContainer")]//button[text()="Редактировать"]')
-  await editBtn.waitForDisplayed({ timeout: 3000 })
+  await editBtn.waitForDisplayed()
   await editBtn.click()
 
   addStep('меняем поле Срок выставления счёта(дни)')
   const billTerm = $('//input[@name="billTerm"]')
-  await billTerm.waitForEnabled({ timeout: 3000 })
-  await billTerm.setValue(10)
+  await billTerm.waitForEnabled()
+  await billTerm.setValue(5)
 
   addStep('Сохраняем')
   const saveBtn = $('//div[contains(@class, "screenControls")]//button[text()="Сохранить"]')
-  await saveBtn.waitForEnabled({ timeout: 3000 })
+  await saveBtn.waitForEnabled()
+  await saveBtn.click()
+
+  await isLoading()
 
   addStep('Проверяем изменение данных')
-  await checkManufactorInfo('Срок выставления счёта', '10')
+  await checkManufactorInfo('Срок выставления счёта', '5')
 
   addStep('Возвращаем обратно')
   await editBtn.click()
 
-  await billTerm.waitForEnabled({ timeout: 3000 })
+  await billTerm.waitForEnabled()
   await billTerm.setValue(1)
+
+  await saveBtn.waitForEnabled()
+  await saveBtn.click()
+
+  await isLoading()
 
   addStep('Проверяем изменение данных')
   await checkManufactorInfo('Срок выставления счёта', '1')
 }
 
 async function checkManufactorData(): Promise<void> {
-  const tab = $('//span[contains(@class, "orderNavItem") and text() = "Данные производителя"]')
-  await tab.click()
+  await accountTabClick('Данные производителя')
   await checkManufactorInfo('Префикс конфигурации производителя', 'base')
   await checkManufactorInfo(
     'Краткое наименование производителя',
@@ -92,7 +142,7 @@ async function checkManufactorInfo(titleToFind: string, valueToFind: string): Pr
     const title = await block.$('[class*="title"] span')
     const value = await block.$('[class*="text"]')
 
-    await value.waitForDisplayed({ timeout: 1000 })
+    await value.waitForDisplayed({ timeout: 5000 })
 
     const titleText = await title.getText()
     const valueText = await value.getText()
@@ -107,11 +157,9 @@ async function checkManufactorInfo(titleToFind: string, valueToFind: string): Pr
   endStep()
 }
 
-async function checkRequisits(path: string): Promise<void> {
+async function checkRequisits(): Promise<void> {
   addStep('Проверяем наличие панели "Реквизиты"')
-  const panel = $(path)
-  await panel.waitForDisplayed()
-  await panel.click()
+  toggleAccountPanel('Реквизиты')
 
   addStep('Клик по кнопке "Редактировать"')
   const editBtn = $('//button[text()="Редактировать..."]')
@@ -124,6 +172,8 @@ async function checkRequisits(path: string): Promise<void> {
   const save = $('//button[contains(@class, "calcButton")]')
   await save.click()
 
+  await isLoading()
+
   const phoneValue = $(
     "//div[contains(@class, 'rowRequisit')][div[contains(@class, 'label') and text()='Телефон']]//div[contains(@class, 'value')]"
   )
@@ -134,10 +184,14 @@ async function checkRequisits(path: string): Promise<void> {
   await editBtn.waitForClickable()
   await editBtn.click()
 
+  await isLoading()
+
   addStep('Возвращаем исходные данные.')
   await phone.waitForEnabled()
   await phone.setValue('89110000000')
   await save.click()
+
+  await isLoading()
 
   addStep('Проверяем изменения: телефон изменился с +79384004411 на 89110000000')
   await phoneValue.waitForDisplayed()
@@ -145,22 +199,23 @@ async function checkRequisits(path: string): Promise<void> {
 }
 
 async function validateCounterparty(): Promise<void> {
+  const root = $('#popup-root')
   const addButton = $('#add')
-  const select = $('#customerType')
-  const state = $('aria/Юридическое лицо')
+  const select = $('div[class*="control"]:has(input#customerType)')
+  const state = select.$('aria/Юридическое лицо')
   const inn = $('#INN')
   const kpp = $('#KPP')
   const okpo = $('#KPP')
   const companyName = $('#companyName')
   const lawAddress = $('#lawAddress')
   const factAddress = $('#factAddress')
-  const flag = $('input[type="checkbox"]')
-  const phone = $('//form[contains(@class, "formContent")]//input[@id="phone"]')
+  const flag = root.$('div').$('input[type="checkbox"]')
+  const phone = $('form[class*="formContent"]').$('input#phone')
   const bik = $('#BIK')
   const bankName = $('#bankName')
   const corrBankAccount = $('#corrBankAccount')
   const privateBankAccount = $('#privateBankAccount')
-  const save = $('//button[contains(@class, "calcButton")]')
+  const save = $('button[class*="calcButton"]')
   const invalidClass = /inputInvalid/
 
   await addButton.waitForClickable()
@@ -184,7 +239,7 @@ async function validateCounterparty(): Promise<void> {
   await expect(companyName).not.toBe('')
   await expect(lawAddress).not.toBe('')
   await expect(factAddress).not.toBe('')
-  await expect(flag).toBeDisplayed()
+  await flag.waitForEnabled({ timeout: 3000 })
   await flag.click()
   await expect(factAddress).toBeEnabled()
 
@@ -209,12 +264,14 @@ async function validateCounterparty(): Promise<void> {
   addStep('Ввод валидного расчётного счёта банка')
   await privateBankAccount.setValue('40702810355130007976')
 
-  await save.waitForEnabled({ timeout: 1000 })
+  await save.waitForEnabled()
   await save.click()
+
+  await isLoading()
 
   const item = $('tbody tr:first-child')
 
-  await $('table').$('aria/7810348720').waitForDisplayed({ timeout: 5000 })
+  await $('table').$('aria/7810348720').waitForDisplayed()
   await item.click()
 
   const added = await browser.takeScreenshot()
@@ -222,18 +279,20 @@ async function validateCounterparty(): Promise<void> {
 
   const edit = $('#edit')
   addStep('Клик по кнопке "Просмотр/редактирование карточки выбранного контрагента"')
-  await edit.waitForClickable({ timeout: 3000 })
+  await edit.waitForClickable()
   await edit.click()
 
   addStep('Меняем одно из полей (телефон)')
-  await phone.waitForEnabled({ timeout: 1000 })
+  await phone.waitForEnabled()
   await phone.setValue('89113245522')
 
-  await save.waitForEnabled({ timeout: 1000 })
+  await save.waitForEnabled()
   await save.click()
 
+  await isLoading()
+
   addStep('Проверяем, обновились ли данные')
-  await $('table').$('aria/89113245522').waitForDisplayed({ timeout: 5000 })
+  await $('table').$('aria/89113245522').waitForDisplayed()
 
   const edited = await browser.takeScreenshot()
   addAttachment('Контрагент отредактирован', Buffer.from(edited, 'base64'), 'image/png')
@@ -245,89 +304,97 @@ async function validateCounterparty(): Promise<void> {
   await remove.waitForClickable()
   await remove.click()
 
-  const deleteBtn = $('//button[contains(@class, "removeButton")]')
+  const deleteBtn = $('button[class*="removeButton"]')
   await deleteBtn.waitForClickable()
   await deleteBtn.click()
 
-  await $('//div[contains(@class, "waitIconDisabled")]').waitForExist()
-  await expect(item).not.toBeExisting()
+  await isLoading()
 
   const deleted = await browser.takeScreenshot()
   addAttachment('Контрагент удален', Buffer.from(deleted, 'base64'), 'image/png')
 }
 
-async function validateUser(path: string): Promise<void> {
+async function validateUser(): Promise<void> {
   addStep('Проверяем наличие панели Аккаунт')
-  const accountLegend = $(path)
-  await accountLegend.waitForDisplayed({
-    timeout: 5000,
-    timeoutMsg: 'account panel is not displayed'
-  })
-  await accountLegend.click()
-
-  // addStep('Проверяем наличие панели Пользователь')
-  // const userLegend = $(legendPath('Пользователь'))
-  // await userLegend.waitForDisplayed({ timeout: 5000, timeoutMsg: 'user panel is not displayed' })
-  // await userLegend.click()
+  await toggleAccountPanel('Аккаунт')
 
   const surname = $('#surname')
   const name = $('#name')
   const secondName = $('#secondName')
-  const saveBtn = $('//button[text()="Сохранить"]')
+  const saveBtn = $$("button[class*='accountButton']")[2]
+  const popup = $('div[class*="popupContainer"]')
+  const root = $('#popup-root')
+  const saveAgreement = popup.$('//button[contains(@class, "calcButton") and text()="Принять"]')
+
+  const defaultSurname = await surname.getValue()
+  const defaultName = await name.getValue()
+  const defaultSecondName = await secondName.getValue()
 
   addStep('тест на ввод невалидных значений')
-  await surname.setValue('Testing')
+  await surname.setValue('Surname')
   await name.setValue('Name')
-  await secondName.setValue('secondName')
+  await secondName.setValue('SecondName')
   addStep('проверяем кнопку "Сохранить" - недоступна')
   await expect(saveBtn).toBeDisabled()
 
   addStep('тест на ввод валидных значений, совпадающих с дефолтными')
-  await surname.setValue('Тестовый')
-  await name.setValue('Покупатель')
-  await secondName.setValue('Первый')
+  await surname.setValue(defaultSurname)
+  await name.setValue(defaultName)
+  await secondName.setValue(defaultSecondName)
   await expect(saveBtn).toBeDisabled()
 
   addStep('тест на ввод валидных значений, отличающихся от дефолтных')
-  await surname.setValue('Тестовый')
-  await name.setValue('Покупатель')
-  await secondName.setValue('Второй')
+  await surname.setValue(defaultName)
+  await name.setValue(defaultSecondName)
+  await secondName.setValue(defaultSurname)
   await expect(saveBtn).toBeEnabled()
 
-  addStep('Сохраняем новые значния')
-  await saveBtn.waitForClickable({
-    timeout: 15000,
-    timeoutMsg: 'savebtn is not clickable'
-  })
+  addStep('Сохраняем новые значния, принимая Пользовательское соглашение')
   await saveBtn.click()
+  await expect(root).toHaveChildren()
+  await browser.keys([Key.Tab])
+  await saveAgreement.waitForEnabled()
+  await saveAgreement.click()
 
-  await surname.waitForEnabled({
-    timeout: 15000,
-    timeoutMsg: 'surname is not Enabled'
-  })
-  await name.waitForEnabled({
-    timeout: 15000,
-    timeoutMsg: 'name is not Enabled'
-  })
-  await secondName.waitForEnabled({
-    timeout: 15000,
-    timeoutMsg: 'secondName is not Enabled'
-  })
+  await isLoading()
+
+  await surname.waitForEnabled({ timeout: 5000 })
+  await name.waitForEnabled({ timeout: 5000 })
+  await secondName.waitForEnabled({ timeout: 5000 })
+
+  await surname.clearValue()
+  await name.clearValue()
+  await secondName.clearValue()
 
   addStep('Возвращаем и сохраняем исходные значения')
-  await surname.setValue('Тестовый')
-  await name.setValue('Покупатель')
-  await secondName.setValue('Первый')
-
-  await saveBtn.waitForClickable({
-    timeout: 15000,
-    timeoutMsg: 'savebtn is not clickable'
-  })
+  await surname.setValue(defaultSurname)
+  await name.setValue(defaultName)
+  await secondName.setValue(defaultSecondName)
+  await saveBtn.waitForEnabled({ timeout: 6000 })
   await saveBtn.click()
+
+  await isLoading()
+
+  await expect(root).toHaveChildren()
+  await browser.keys([Key.Tab])
+  await saveAgreement.waitForEnabled()
+  await saveAgreement.click()
+
+  await isLoading()
+
+  await Promise.all([
+    await expect(surname).toHaveValue(defaultSurname),
+    await expect(name).toHaveValue(defaultName),
+    await expect(secondName).toHaveValue(defaultSecondName)
+  ])
+
+  await browser.takeScreenshot()
 }
 
-async function validatePassword(path: string): Promise<void> {
-  if (!userBuyerPassword) throw new Error('userBuyerPassword undefiend')
+async function validatePassword(userPassword: string): Promise<void> {
+  if (!userPassword) throw new Error('userBuyerPassword undefiend')
+  await toggleAccountPanel('Смена пароля')
+
   addStep('Проверяем наличие панели Смена пароля')
   const oldPassword = $('#oldPassword')
   const newPassword = $('#newPassword')
@@ -335,15 +402,8 @@ async function validatePassword(path: string): Promise<void> {
   const savePasswordBtn = $('//button[text()="Сменить пароль..."]')
   const regexp = new RegExp('inputInvalid')
   const errorMessage = $('.rnc__notification-title')
-  const changePasswd = $(path)
   const message = $('aria/Пароль успешно изменен')
   const closeIcon = $('//span[contains(@class, "closeIcon")]')
-
-  await changePasswd.waitForDisplayed({
-    timeout: 15000,
-    timeoutMsg: 'change password panel is not displayed'
-  })
-  await changePasswd.click()
 
   addStep('Проверяем на невалидность: < 8 символов')
 
@@ -360,8 +420,8 @@ async function validatePassword(path: string): Promise<void> {
 
   addStep('Ввод одинаковых Текущий и Новый пароли. Результат - невалидность поля "Новый"')
 
-  await oldPassword.setValue(userBuyerPassword)
-  await newPassword.setValue(userBuyerPassword)
+  await oldPassword.setValue(userPassword)
+  await newPassword.setValue(userPassword)
   await expect(newPassword).toHaveElementClass(regexp)
 
   addStep('Ввод разных паролей в поля Новый и Подтвердить. Результат - невалидность поля "Новый"')
@@ -388,7 +448,7 @@ async function validatePassword(path: string): Promise<void> {
   await expect(errorMessage).toHaveText('Старый пароль указан некорректно')
 
   addStep('Верный Текущий пароль, валидные "Новый" и "Подтвердить". Результат - пароль изменился.')
-  await oldPassword.setValue(userBuyerPassword)
+  await oldPassword.setValue(userPassword)
   await newPassword.setValue('NewPassword-1')
   await repeatNewPassord.setValue('NewPassword-1')
 
@@ -403,8 +463,8 @@ async function validatePassword(path: string): Promise<void> {
 
   addStep('Возвращаем пароль обратно')
   await oldPassword.setValue('NewPassword-1')
-  await newPassword.setValue(userBuyerPassword)
-  await repeatNewPassord.setValue(userBuyerPassword)
+  await newPassword.setValue(userPassword)
+  await repeatNewPassord.setValue(userPassword)
 
   await savePasswordBtn.waitForClickable()
   await savePasswordBtn.click()
