@@ -1,6 +1,6 @@
 import { $, browser } from '@wdio/globals'
 
-export async function isLoading(timeout = 15000): Promise<void> {
+export async function waitForLoading(timeout = 15000): Promise<void> {
   await browser.waitUntil(
     async () => {
       const loadingIcon = $('div[class*="styles_waitIconEnabled"]')

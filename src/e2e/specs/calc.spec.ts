@@ -1,22 +1,21 @@
 import { browser, $, $$ } from '@wdio/globals'
-import { getXPathSelector } from '@/funcs/getXPathSelector'
 import { addStep, addSeverity, addAttachment } from '@wdio/allure-reporter'
-import { loadPage } from '@/funcs/loadPage'
+import { getXPathSelector } from 'e2e/helpers/get-xpath-selector'
+import mainPage from 'e2e/page-objects/calc.page'
 
-// describe('Проверка 3D-движка', () => {
-//   it('Типы изделий, 3D-модели и эскизы должны быть доступны', async () => {
-//     addSeverity('critical')
+describe('Проверка 3D-движка', () => {
+  before(async () => await mainPage.open())
 
-//     addStep('Загрузка страницы')
-//     await loadPage()
+  it('Типы изделий, 3D-модели и эскизы должны быть доступны', async () => {
+    addSeverity('critical')
 
-//     addStep('Загрузка калькулятора')
-//     await loadMaster()
+    addStep('Загрузка калькулятора')
+    await loadMaster()
 
-//     addStep('Проверка типов изделий')
-//     await checkType()
-//   })
-// })
+    addStep('Проверка типов изделий')
+    await checkType()
+  })
+})
 
 async function loadMaster(): Promise<void> {
   const master = $("//div[contains(@class, 'master')]")

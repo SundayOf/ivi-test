@@ -13,10 +13,15 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
+    "allowImportingTsExtensions": true,
+    "baseUrl": "./src",
     "paths": {
-      "@/*": ["test/*"]
+      "backend/*": ["backend/*"],
+      "config/*": ["config/*"],
+      "docker/*": ["docker/*"],
+      "frontend/*": ["frontend/*"],
+      "e2e/*": ["e2e/*"]
     }
   },
-  "include": ["test", "wdio.conf.ts"]
+  "include": ["src", "wdio.conf.ts", "wdio.docker.conf.ts"]
 }

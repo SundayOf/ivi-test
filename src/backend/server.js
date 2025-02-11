@@ -7,11 +7,11 @@ import path from 'path'
 const app = express()
 const port = 4000
 
-const allureResultsDir = path.resolve('./reporters/allure-results')
-const allureReportDir = path.resolve('./reporters/allure-report')
+const allureResultsDir = path.resolve('src/reporters/allure-results')
+const allureReportDir = path.resolve('src/reporters/allure-report')
 
 app.use(bodyParser.json())
-app.use(express.static('public'))
+app.use(express.static('src/frontend'))
 app.use('/allure-report', express.static(allureReportDir))
 
 app.post('/run-tests', async (req, res) => {
@@ -94,7 +94,7 @@ const generateAllureReport = (res, testMessage) => {
 }
 
 app.get('/', (req, res) => {
-  res.sendFile(path.resolve('public/index.html'))
+  res.sendFile(path.resolve('src/frontend/index.html'))
 })
 
 app.listen(port, () => {

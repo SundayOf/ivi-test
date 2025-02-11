@@ -1,14 +1,12 @@
 version: '3.8'
 
 services:
-  # Selenium Hub - центр управления браузерами
   selenium-hub:
     image: selenium/hub:4.17.0
     container_name: selenium-hub
     ports:
       - '4444:4444'
 
-  # Chrome Node - контейнер с браузером Chrome
   chrome-node:
     image: selenium/node-chrome:4.17.0
     container_name: chrome-node
@@ -19,7 +17,6 @@ services:
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
 
-  # Веб-приложение
   app:
     build:
       context: .
@@ -34,7 +31,6 @@ services:
       - SELENIUM_GRID_URL=http://selenium-hub:4444
       - IS_DOCKER=true
 
-  # Сервис с тестами
   wdio-tests:
     build:
       context: .

@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 
-const allureResultsDir = path.resolve('./reporters/allure-results')
-const allureReportDir = path.resolve('./reporters/allure-report')
+const allureResultsDir = path.resolve('../reporters/allure-results')
+const allureReportDir = path.resolve('../reporters/allure-report')
 
 fs.rm(allureResultsDir, { recursive: true, force: true }, (err) => {
   if (err) {

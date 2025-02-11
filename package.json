@@ -1,7 +1,7 @@
 {
   "name": "ivi-test",
   "type": "module",
-  "main": "server.js",
+  "main": "src/backend/server.js",
   "devDependencies": {
     "@wdio/allure-reporter": "^9.4.2",
     "@wdio/cli": "^9.4.1",
@@ -15,12 +15,12 @@
     "typescript": "^5.7.2"
   },
   "scripts": {
-    "start": "node ./server.js",
-    "start:dev": "nodemon ./server.js",
+    "start": "node ./src/backend/server.js",
+    "start:dev": "nodemon ./src/backend/server.js",
     "wdio": "wdio run ./wdio.conf.ts",
     "wdio:docker": "wdio run ./wdio.docker.conf.ts",
-    "report": "npx allure generate ./reporters/allure-results --clean",
-    "clean-results": "node utils/clean-results.js"
+    "report": "npx allure generate ./src/reporters/allure-results --clean",
+    "clean-results": "node ./src/backend/clean-results.js"
   },
   "dependencies": {
     "body-parser": "^1.20.3",

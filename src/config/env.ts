@@ -13,7 +13,6 @@ export const userManufactorPassword = process.env.TEST_USER_MANUFACTOR_PASSWORD
 export const userVendorLogin = process.env.TEST_USER_VENDOR
 export const userVendorPassword = process.env.TEST_USER_VENDOR_PASSWORD
 
-export const baseUrl = process.env.TEST_SITE_URL
-export const local = process.env.LOCALHOST
+export const baseUrl = process.env.TEST_SITE_URL || ''
 export const domainLogin = process.env.DOMAIN_USER
 export const domainPassword = process.env.DOMAIN_USER_PASSWORD

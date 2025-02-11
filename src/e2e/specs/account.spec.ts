@@ -6,33 +6,31 @@ import {
   userManufactorPassword,
   userVendorLogin,
   userVendorPassword
-} from '@/env-config'
-import { loginWithValidCredentials } from '@/funcs/login'
-import { isLogged } from '@/funcs/isLogged'
-import { loadPage } from '@/funcs/loadPage'
-import { isLoading } from '@/funcs/isLoading'
-import { addAttachment, addStep, endStep, startStep } from '@wdio/allure-reporter'
+} from 'config/env'
+import { addAttachment, addSeverity, addStep, endStep, startStep } from '@wdio/allure-reporter'
 import { $, expect } from '@wdio/globals'
 import { Key } from 'webdriverio'
-
-type TRole = 'buyer' | 'manufactor' | 'vendor'
+import { waitForLoading } from 'e2e/helpers/wait-for-loading'
+import { type TRole } from 'e2e/common/types'
+import loginPage from 'e2e/page-objects/login.page'
 
 describe('Тестирование пользователей', () => {
+  beforeEach(async () => await loginPage.open())
+  afterEach(async () => await loginPage.logout())
+
   it('Должно провести на ввод валидных и невалидных значений для пользователя testUserBuyer', async () => {
-    await loadPage()
-    await loginWithValidCredentials(userBuyerLogin, userBuyerPassword)
+    addSeverity('critical')
+    await loginPage.login(userBuyerLogin, userBuyerPassword)
     await testAccountPanels('buyer')
   })
   it('Должно провести на ввод валидных и невалидных значений для пользователя testUserManufactor', async () => {
-    await isLogged()
-    await loadPage()
-    await loginWithValidCredentials(userManufactorLogin, userManufactorPassword)
+    addSeverity('critical')
+    await loginPage.login(userManufactorLogin, userManufactorPassword)
     await testAccountPanels('manufactor')
   })
   it('Должно провести на ввод валидных и невалидных значений для пользователя testUserVendor', async () => {
-    await isLogged()
-    await loadPage()
-    await loginWithValidCredentials(userVendorLogin, userVendorPassword)
+    addSeverity('critical')
+    await loginPage.login(userVendorLogin, userVendorPassword)
     await testAccountPanels('vendor')
   })
 })
@@ -83,7 +81,7 @@ async function accountTabClick(text: string): Promise<void> {
 async function checkVendorData(): Promise<void> {
   await accountTabClick('Данные поставщика')
 
-  await isLoading()
+  await waitForLoading()
 
   addStep('Клик по кнопке "Редактировать"')
   const editBtn = $('//div[contains(@class, "tabContainer")]//button[text()="Редактировать"]')
@@ -100,7 +98,7 @@ async function checkVendorData(): Promise<void> {
   await saveBtn.waitForEnabled()
   await saveBtn.click()
 
-  await isLoading()
+  await waitForLoading()
 
   addStep('Проверяем изменение данных')
   await checkManufactorInfo('Срок выставления счёта', '5')
@@ -114,7 +112,7 @@ async function checkVendorData(): Promise<void> {
   await saveBtn.waitForEnabled()
   await saveBtn.click()
 
-  await isLoading()
+  await waitForLoading()
 
   addStep('Проверяем изменение данных')
   await checkManufactorInfo('Срок выставления счёта', '1')
@@ -172,7 +170,7 @@ async function checkRequisits(): Promise<void> {
   const save = $('//button[contains(@class, "calcButton")]')
   await save.click()
 
-  await isLoading()
+  await waitForLoading()
 
   const phoneValue = $(
     "//div[contains(@class, 'rowRequisit')][div[contains(@class, 'label') and text()='Телефон']]//div[contains(@class, 'value')]"
@@ -184,14 +182,14 @@ async function checkRequisits(): Promise<void> {
   await editBtn.waitForClickable()
   await editBtn.click()
 
-  await isLoading()
+  await waitForLoading()
 
   addStep('Возвращаем исходные данные.')
   await phone.waitForEnabled()
   await phone.setValue('89110000000')
   await save.click()
 
-  await isLoading()
+  await waitForLoading()
 
   addStep('Проверяем изменения: телефон изменился с +79384004411 на 89110000000')
   await phoneValue.waitForDisplayed()
@@ -267,7 +265,7 @@ async function validateCounterparty(): Promise<void> {
   await save.waitForEnabled()
   await save.click()
 
-  await isLoading()
+  await waitForLoading()
 
   const item = $('tbody tr:first-child')
 
@@ -289,7 +287,7 @@ async function validateCounterparty(): Promise<void> {
   await save.waitForEnabled()
   await save.click()
 
-  await isLoading()
+  await waitForLoading()
 
   addStep('Проверяем, обновились ли данные')
   await $('table').$('aria/89113245522').waitForDisplayed()
@@ -308,7 +306,7 @@ async function validateCounterparty(): Promise<void> {
   await deleteBtn.waitForClickable()
   await deleteBtn.click()
 
-  await isLoading()
+  await waitForLoading()
 
   const deleted = await browser.takeScreenshot()
   addAttachment('Контрагент удален', Buffer.from(deleted, 'base64'), 'image/png')
@@ -356,7 +354,7 @@ async function validateUser(): Promise<void> {
   await saveAgreement.waitForEnabled()
   await saveAgreement.click()
 
-  await isLoading()
+  await waitForLoading()
 
   await surname.waitForEnabled({ timeout: 5000 })
   await name.waitForEnabled({ timeout: 5000 })
@@ -373,14 +371,14 @@ async function validateUser(): Promise<void> {
   await saveBtn.waitForEnabled({ timeout: 6000 })
   await saveBtn.click()
 
-  await isLoading()
+  await waitForLoading()
 
   await expect(root).toHaveChildren()
   await browser.keys([Key.Tab])
   await saveAgreement.waitForEnabled()
   await saveAgreement.click()
 
-  await isLoading()
+  await waitForLoading()
 
   await Promise.all([
     await expect(surname).toHaveValue(defaultSurname),
